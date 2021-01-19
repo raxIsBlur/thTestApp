@@ -15,23 +15,20 @@ export class PostDetailComponent implements OnInit {
   post: IPost;
   comments: MatTableDataSource<IComment> = new MatTableDataSource<IComment>();
   displayedColumns: string[] = ['id', 'name', 'email', 'body'];
-  // displayedColumns: string[] = ['postId', 'id', 'name', 'email', 'body'];
 
-  constructor(private route: ActivatedRoute, private dataService: DataService) { 
-    console.log('route', route);
+  name: string = '';
+  email: string = '';
+  content: string = '';
+
+  constructor(private route: ActivatedRoute, private dataService: DataService) {
     this.postId = parseInt(route.snapshot.paramMap.get('id'));
   }
 
   ngOnInit(): void {
-    // this.post = {
-    //   id: 1,
-    //   userId: 1,
-    //   title: 'asd',
-    //   body: 'asdasdadasda',
-    // }
-
     this.loadPost(this.postId);
     this.loadComments(this.postId);
+
+    this.comments.filterPredicate = this.getFilterPredicate();
   }
 
   loadPost(id: number) {
@@ -43,7 +40,45 @@ export class PostDetailComponent implements OnInit {
   loadComments(postId: number) {
     this.dataService.getPostComments(postId).subscribe(x => {
       this.comments = new MatTableDataSource(x);
+      this.comments.filterPredicate = this.getFilterPredicate();
     });
   }
 
+  getFilterPredicate() {
+    return (row: IComment, filters: string) => {
+      const filterArray = filters.split('$');
+      const filterName = filterArray[0];
+      const filterEmail = filterArray[1];
+      const filterContent = filterArray[2];
+
+      const matchFilter = [];
+
+      const name = row.name;
+      const email = row.email;
+      const content = row.body;
+
+      matchFilter.push(name.toLowerCase().includes(filterName));
+      matchFilter.push(email.toLowerCase().includes(filterEmail));
+      matchFilter.push(content.toLowerCase().includes(filterContent));
+
+      return matchFilter.every(Boolean);
+    };
+  }
+
+  onFilterChange($event: any, type: string) {
+    switch(type) {
+      case 'name': 
+        this.name = $event.target.value || '';
+      break;
+      case 'email': 
+        this.email = $event.target.value || '';
+      break;
+      case 'content': 
+        this.content = $event.target.value || '';
+      break;
+    }
+
+    const filterValue = this.name + '$' + this.email + '$' + this.content;
+    this.comments.filter = filterValue.trim().toLowerCase();
+  }
 }
